@@ -11,11 +11,18 @@ function badge(score) {
 }
 
 function html(cast) {
-    const b = badge(cast.ethosScore);
-    const low = cast.ethosScore < 40;
+    const b = badge(cast.ethosScore || 50);
+    const low = (cast.ethosScore || 50) < 40;
     const exp = expanded.has(cast.hash);
     const hide = low && !exp;
-    const ini = cast.author.username.slice(0, 2).toUpperCase();
+    const username = cast.author?.username || 'unknown';
+    const displayName = cast.author?.displayName || 'Unknown User';
+    const walletAddress = cast.author?.walletAddress || '0x0000...0000';
+    const ini = username.slice(0, 2).toUpperCase();
+    const text = cast.text || 'No content';
+    const trustRank = cast.trustRank || 0;
+    const likes = cast.reactions?.likes || 0;
+    const recasts = cast.reactions?.recasts || 0;
 
     return `
         <div class="bg-white rounded-lg shadow-md p-4 ${hide ? 'opacity-75' : ''}" style="animation: fadeIn 0.3s">
@@ -23,23 +30,23 @@ function html(cast) {
                 <div class="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-blue-400 flex items-center justify-center text-white font-bold">${ini}</div>
                 <div class="flex-1">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <span class="font-bold">${cast.author.displayName}</span>
-                        <span class="text-gray-500 text-sm">@${cast.author.username}</span>
+                        <span class="font-bold">${displayName}</span>
+                        <span class="text-gray-500 text-sm">@${username}</span>
                         <span class="px-2 py-1 rounded-full text-xs font-semibold ${b.bg} ${b.text} flex items-center gap-1">
                             <span class="w-2 h-2 rounded-full ${b.dot}"></span>${b.label}
                         </span>
-                        <span class="text-xs text-gray-400">Score: ${cast.ethosScore}</span>
+                        <span class="text-xs text-gray-400">Score: ${cast.ethosScore || 50}</span>
                     </div>
-                    <div class="text-xs text-gray-400 mt-1">Trust Rank: ${cast.trustRank.toFixed(1)} • ${cast.walletAddress.slice(0,8)}...</div>
+                    <div class="text-xs text-gray-400 mt-1">Trust Rank: ${trustRank.toFixed(1)} • ${walletAddress.slice(0,8)}...</div>
                 </div>
             </div>
             ${hide ? `
                 <button onclick="toggle('${cast.hash}')" class="mt-3 text-sm text-gray-500 hover:text-gray-700">▼ Low trust (click to expand)</button>
             ` : `
-                <p class="mt-3 text-gray-800">${cast.text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+                <p class="mt-3 text-gray-800">${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
                 <div class="flex gap-4 mt-3 text-gray-500 text-sm">
-                    <span>❤️ ${cast.reactions.likes}</span>
-                    <span>🔄 ${cast.reactions.recasts}</span>
+                    <span>❤️ ${likes}</span>
+                    <span>🔄 ${recasts}</span>
                 </div>
                 ${low && exp ? `<button onclick="toggle('${cast.hash}')" class="mt-2 text-sm text-gray-500">▲ Collapse</button>` : ''}
             `}
@@ -56,8 +63,9 @@ function filter() {
     const high = $('highTrustFilter').checked;
     const hide = $('hideLowTrustFilter').checked;
     filteredCasts = allCasts.filter(c => {
-        if (high && c.ethosScore < 70) return false;
-        if (hide && c.ethosScore < 40) return false;
+        const score = c.ethosScore || 50;
+        if (high && score < 70) return false;
+        if (hide && score < 40) return false;
         return true;
     });
     render();
@@ -112,6 +120,7 @@ async function load() {
         $('loading').classList.add('hidden');
         $('error').classList.remove('hidden');
         $('errorMsg').textContent = err.message;
+        console.error('Load error:', err);
     }
 }
 
@@ -121,4 +130,5 @@ $('channelInput').onkeypress = e => e.key === 'Enter' && load();
 $('highTrustFilter').onchange = filter;
 $('hideLowTrustFilter').onchange = filter;
 
+// Auto-load on page load
 load();
