@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ethos Farcaster Reader</title>
+    <title>Ethos Farcaster Reader - Trust-Ranked Social Feeds</title>
+    <meta name="description" content="Trust-ranked Farcaster channel reader powered by Ethos Score. Automatically detect and quarantine spam while surfacing quality content.">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .cast-card {
@@ -44,6 +45,11 @@
             <div class="container mx-auto px-4 py-6">
                 <h1 class="text-3xl font-bold">🔐 Ethos Farcaster Reader</h1>
                 <p class="text-purple-200 mt-2">Trust-ranked Farcaster channels powered by Ethos Score</p>
+                <div class="mt-3">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                        🏆 Built for Ethos Vibeathon 2025
+                    </span>
+                </div>
             </div>
         </header>
 
@@ -56,12 +62,13 @@
                         <input 
                             type="text" 
                             id="channelInput" 
-                            value="base" 
+                            value="crypto" 
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            placeholder="Enter channel name (e.g., base, ethereum, degen)"
+                            placeholder="Enter channel name (e.g., crypto, nft, ethereum)"
                         >
-                        <div class="mt-2 text-xs text-gray-500">
-                            Popular: base, farcaster, degen, ethereum, memes, dev, crypto
+                        <div class="mt-2 text-xs text-gray-600">
+                            🟢 <strong>Real data:</strong> crypto, nft | 
+                            🟡 <strong>Demo:</strong> ethos, base, ethereum, farcaster, degen, zama
                         </div>
                     </div>
                     <div>
@@ -79,244 +86,4 @@
                 </div>
                 <button 
                     id="loadBtn" 
-                    class="mt-4 w-full bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
-                >
-                    Load Casts
-                </button>
-            </div>
-
-            <!-- Stats -->
-            <div id="stats" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"></div>
-
-            <!-- Casts Container -->
-            <div id="castsContainer" class="space-y-4"></div>
-
-            <!-- Loading -->
-            <div id="loading" class="text-center py-12 hidden">
-                <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent"></div>
-                <p class="mt-4 text-gray-600">Loading casts...</p>
-            </div>
-        </div>
-    </div>
-
-    <script>
-var allCasts = [];
-var currentFilter = 'all';
-
-document.getElementById('loadBtn').addEventListener('click', loadCasts);
-document.getElementById('filterSelect').addEventListener('change', function(e) {
-    currentFilter = e.target.value;
-    renderCasts();
-});
-
-// Allow Enter key to load casts
-document.getElementById('channelInput').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        loadCasts();
-    }
-});
-
-function loadCasts() {
-    var channel = document.getElementById('channelInput').value || 'base';
-    var loading = document.getElementById('loading');
-    var container = document.getElementById('castsContainer');
-    
-    loading.classList.remove('hidden');
-    container.innerHTML = '';
-    document.getElementById('stats').innerHTML = '';
-    
-    fetch('/api/channel?channel=' + encodeURIComponent(channel))
-        .then(function(response) {
-            if (!response.ok) {
-                throw new Error('HTTP ' + response.status);
-            }
-            return response.json();
-        })
-        .then(function(data) {
-            loading.classList.add('hidden');
-            
-            if (data.success && data.casts && data.casts.length > 0) {
-                allCasts = data.casts;
-                renderCasts();
-                updateStats();
-                
-                // Afficher une note si données de demo
-                if (data.source === 'demo') {
-                    showNote('Using demo data. Configure PINATA_JWT for real Farcaster data.', 'info');
-                } else if (data.note) {
-                    showNote(data.note, 'info');
-                }
-            } else {
-                // Aucun cast trouvé ou erreur
-                var errorMsg = data.message || 'No casts found for this channel';
-                var suggestions = '';
-                
-                if (data.suggestedChannels && data.suggestedChannels.length > 0) {
-                    suggestions = '<div class="mt-4"><strong class="text-gray-700">Try these popular channels:</strong><br>' +
-                        '<div class="flex flex-wrap gap-2 mt-2">' +
-                        data.suggestedChannels.map(function(ch) {
-                            return '<button onclick="loadChannelQuick(\'' + ch + '\')" class="px-3 py-1 bg-purple-100 hover:bg-purple-200 rounded-full text-sm font-medium text-purple-700 transition">' + ch + '</button>';
-                        }).join('') +
-                        '</div></div>';
-                }
-                
-                container.innerHTML = '<div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">' +
-                    '<div class="flex">' +
-                        '<div class="flex-shrink-0">' +
-                            '<svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">' +
-                                '<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />' +
-                            '</svg>' +
-                        '</div>' +
-                        '<div class="ml-3">' +
-                            '<p class="text-sm text-yellow-700">' + errorMsg + '</p>' +
-                            suggestions +
-                        '</div>' +
-                    '</div>' +
-                '</div>';
-            }
-        })
-        .catch(function(error) {
-            loading.classList.add('hidden');
-            container.innerHTML = '<div class="bg-red-50 border-l-4 border-red-400 p-4 rounded">' +
-                '<div class="flex">' +
-                    '<div class="flex-shrink-0">' +
-                        '<svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">' +
-                            '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />' +
-                        '</svg>' +
-                    '</div>' +
-                    '<div class="ml-3">' +
-                        '<p class="text-sm text-red-700"><strong>Error:</strong> ' + error.message + '</p>' +
-                        '<p class="text-sm text-red-600 mt-1">Please check console for details.</p>' +
-                    '</div>' +
-                '</div>' +
-            '</div>';
-            console.error('Fetch error:', error);
-        });
-}
-
-function renderCasts() {
-    var container = document.getElementById('castsContainer');
-    var filtered = filterCasts(allCasts);
-    
-    if (filtered.length === 0) {
-        container.innerHTML = '<div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">No casts match the current filter</div>';
-        return;
-    }
-    
-    container.innerHTML = filtered.map(function(cast) {
-        var trustLevel = getTrustLevel(cast.trustRank);
-        var isQuarantined = cast.trustRank < 40;
-        
-        return '<div class="cast-card bg-white rounded-lg shadow p-6 ' + (isQuarantined ? 'quarantine' : '') + '">' +
-            '<div class="flex items-start justify-between mb-4">' +
-                '<div class="flex items-center space-x-3">' +
-                    '<div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-xl font-bold text-purple-600">' +
-                        cast.author.displayName.charAt(0).toUpperCase() +
-                    '</div>' +
-                    '<div>' +
-                        '<div class="font-semibold text-gray-900">' + escapeHtml(cast.author.displayName) + '</div>' +
-                        '<div class="text-sm text-gray-500">@' + escapeHtml(cast.author.username) + ' • FID: ' + cast.author.fid + '</div>' +
-                    '</div>' +
-                '</div>' +
-                '<div class="flex items-center space-x-2">' +
-                    '<span class="badge badge-' + trustLevel + '">' + trustLevel.toUpperCase() + '</span>' +
-                    (isQuarantined ? '<span class="text-xs text-red-600 font-semibold">⚠️ QUARANTINED</span>' : '') +
-                '</div>' +
-            '</div>' +
-            '<p class="text-gray-800 mb-4 whitespace-pre-wrap">' + escapeHtml(cast.text) + '</p>' +
-            '<div class="flex items-center justify-between text-sm text-gray-600 pt-3 border-t border-gray-100">' +
-                '<div class="flex space-x-4">' +
-                    '<span title="Likes">❤️ ' + cast.reactions.likes + '</span>' +
-                    '<span title="Recasts">🔄 ' + cast.reactions.recasts + '</span>' +
-                    (cast.reactions.replies ? '<span title="Replies">💬 ' + cast.reactions.replies + '</span>' : '') +
-                '</div>' +
-                '<div class="flex space-x-4">' +
-                    '<span class="font-semibold text-purple-600" title="Ethos Score">Score: ' + cast.ethosScore + '</span>' +
-                    '<span class="font-semibold text-indigo-600" title="Trust Rank">Trust: ' + cast.trustRank + '</span>' +
-                '</div>' +
-            '</div>' +
-        '</div>';
-    }).join('');
-}
-
-function filterCasts(casts) {
-    if (currentFilter === 'all') {
-        return casts;
-    }
-    
-    return casts.filter(function(cast) {
-        if (currentFilter === 'high') {
-            return cast.trustRank >= 70;
-        } else if (currentFilter === 'mid') {
-            return cast.trustRank >= 40 && cast.trustRank < 70;
-        } else if (currentFilter === 'low') {
-            return cast.trustRank < 40;
-        }
-        return true;
-    });
-}
-
-function getTrustLevel(rank) {
-    if (rank >= 70) return 'high';
-    if (rank >= 40) return 'mid';
-    return 'low';
-}
-
-function updateStats() {
-    var high = allCasts.filter(function(c) { return c.trustRank >= 70; }).length;
-    var mid = allCasts.filter(function(c) { return c.trustRank >= 40 && c.trustRank < 70; }).length;
-    var low = allCasts.filter(function(c) { return c.trustRank < 40; }).length;
-    
-    document.getElementById('stats').innerHTML = 
-        '<div class="bg-white rounded-lg shadow p-4">' +
-            '<div class="text-2xl font-bold text-purple-600">' + allCasts.length + '</div>' +
-            '<div class="text-sm text-gray-600">Total Casts</div>' +
-        '</div>' +
-        '<div class="bg-white rounded-lg shadow p-4">' +
-            '<div class="text-2xl font-bold text-green-600">' + high + '</div>' +
-            '<div class="text-sm text-gray-600">High Trust</div>' +
-        '</div>' +
-        '<div class="bg-white rounded-lg shadow p-4">' +
-            '<div class="text-2xl font-bold text-yellow-600">' + mid + '</div>' +
-            '<div class="text-sm text-gray-600">Mid Trust</div>' +
-        '</div>' +
-        '<div class="bg-white rounded-lg shadow p-4">' +
-            '<div class="text-2xl font-bold text-red-600">' + low + '</div>' +
-            '<div class="text-sm text-gray-600">Low Trust (Quarantined)</div>' +
-        '</div>';
-}
-
-function showNote(message, type) {
-    var colors = {
-        info: 'bg-blue-50 border-blue-400 text-blue-700',
-        warning: 'bg-yellow-50 border-yellow-400 text-yellow-700',
-        success: 'bg-green-50 border-green-400 text-green-700'
-    };
-    
-    var note = document.createElement('div');
-    note.className = 'mb-4 border-l-4 p-3 rounded text-sm ' + (colors[type] || colors.info);
-    note.textContent = message;
-    
-    var container = document.getElementById('castsContainer');
-    container.insertBefore(note, container.firstChild);
-}
-
-function loadChannelQuick(channelName) {
-    document.getElementById('channelInput').value = channelName;
-    loadCasts();
-}
-
-function escapeHtml(text) {
-    var div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Auto-load on page load
-window.addEventListener('load', function() {
-    console.log('Ethos Farcaster Reader loaded');
-    loadCasts();
-});
-    </script>
-</body>
-</html>
+                    class="mt-4 w-full bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 tra
