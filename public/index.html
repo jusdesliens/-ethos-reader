@@ -5,85 +5,300 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ethos Farcaster Reader</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .cast-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .cast-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .quarantine {
+            opacity: 0.6;
+            border: 2px dashed #ef4444;
+        }
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-high {
+            background-color: #10b981;
+            color: white;
+        }
+        .badge-mid {
+            background-color: #f59e0b;
+            color: white;
+        }
+        .badge-low {
+            background-color: #ef4444;
+            color: white;
+        }
+    </style>
 </head>
 <body class="bg-gray-50">
     <div class="min-h-screen">
+        <!-- Header -->
         <header class="bg-purple-600 text-white shadow-lg">
             <div class="container mx-auto px-4 py-6">
                 <h1 class="text-3xl font-bold">🔐 Ethos Farcaster Reader</h1>
-                <p class="text-purple-200 mt-2">Trust-ranked Farcaster channels</p>
+                <p class="text-purple-200 mt-2">Trust-ranked Farcaster channels powered by Ethos Score</p>
+                <div class="mt-3">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                        🏆 Built for Ethos Vibeathon 2025
+                    </span>
+                </div>
             </div>
         </header>
 
+        <!-- Controls -->
         <div class="container mx-auto px-4 py-6">
             <div class="bg-white rounded-lg shadow p-6 mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Channel</label>
-                <input 
-                    type="text" 
-                    id="channelInput" 
-                    value="crypto" 
-                    class="w-full px-4 py-2 border rounded-lg mb-4"
-                >
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Channel</label>
+                        <input 
+                            type="text" 
+                            id="channelInput" 
+                            value="crypto" 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            placeholder="Enter channel name"
+                        >
+                        <div class="mt-2 text-xs text-gray-600">
+                            🟢 <strong>Real data:</strong> crypto, nft | 
+                            🟡 <strong>Demo:</strong> ethos, base, ethereum
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Trust Level Filter</label>
+                        <select 
+                            id="filterSelect" 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        >
+                            <option value="all">All Levels</option>
+                            <option value="high">High Trust (≥70)</option>
+                            <option value="mid">Mid Trust (40-69)</option>
+                            <option value="low">Low Trust (<40)</option>
+                        </select>
+                    </div>
+                </div>
                 <button 
                     id="loadBtn" 
-                    class="w-full bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700"
+                    class="mt-4 w-full bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
                 >
                     Load Casts
                 </button>
             </div>
 
+            <!-- Stats -->
+            <div id="stats" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"></div>
+
+            <!-- Casts Container -->
+            <div id="castsContainer" class="space-y-4"></div>
+
+            <!-- Loading -->
             <div id="loading" class="text-center py-12 hidden">
-                <p class="text-gray-600">Loading...</p>
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent"></div>
+                <p class="mt-4 text-gray-600">Loading casts...</p>
             </div>
 
-            <div id="castsContainer"></div>
+            <!-- How it Works -->
+            <div class="bg-white rounded-lg shadow p-6 mt-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">🧠 How Trust Rank Works</h2>
+                <div class="space-y-3 text-gray-700">
+                    <p><strong>Algorithm:</strong> Trust Rank = 0.75 × Ethos Score + 0.25 × Engagement Score</p>
+                    <p><strong>Ethos Score (30-100):</strong> On-chain reputation based on FID, follower count, and verification</p>
+                    <p><strong>Engagement Score:</strong> Social signals from likes, recasts, and replies (logarithmically scaled)</p>
+                    <p><strong>Automatic Quarantine:</strong> Casts with Trust Rank &lt; 40 are flagged as potentially spam/scam</p>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="mt-8 text-center text-gray-600 text-sm pb-8">
+                <p>Built with 💜 for the Ethos Vibeathon 2025</p>
+                <p class="mt-2">
+                    <a href="https://github.com/jusdesliens/-ethos-reader" target="_blank" class="text-purple-600 hover:text-purple-800 underline">View on GitHub</a>
+                </p>
+            </footer>
         </div>
     </div>
 
     <script>
-        document.getElementById('loadBtn').addEventListener('click', function() {
-            var channel = document.getElementById('channelInput').value || 'crypto';
-            var loading = document.getElementById('loading');
-            var container = document.getElementById('castsContainer');
+var allCasts = [];
+var currentFilter = 'all';
+
+document.getElementById('loadBtn').addEventListener('click', loadCasts);
+document.getElementById('filterSelect').addEventListener('change', function(e) {
+    currentFilter = e.target.value;
+    renderCasts();
+});
+
+document.getElementById('channelInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        loadCasts();
+    }
+});
+
+function loadCasts() {
+    var channel = document.getElementById('channelInput').value || 'crypto';
+    var loading = document.getElementById('loading');
+    var container = document.getElementById('castsContainer');
+    
+    loading.classList.remove('hidden');
+    container.innerHTML = '';
+    document.getElementById('stats').innerHTML = '';
+    
+    fetch('/api/channel?channel=' + encodeURIComponent(channel))
+        .then(function(response) {
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+            return response.json();
+        })
+        .then(function(data) {
+            loading.classList.add('hidden');
             
-            loading.classList.remove('hidden');
-            container.innerHTML = '';
-            
-            fetch('/api/channel?channel=' + channel)
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    loading.classList.add('hidden');
-                    
-                    if (data.success && data.casts) {
-                        var html = '';
-                        for (var i = 0; i < data.casts.length; i++) {
-                            var cast = data.casts[i];
-                            var color = cast.trustRank >= 70 ? 'green' : (cast.trustRank >= 40 ? 'yellow' : 'red');
-                            
-                            html += '<div class="bg-white rounded-lg shadow p-6 mb-4">';
-                            html += '<div class="flex justify-between mb-2">';
-                            html += '<strong>' + cast.author.displayName + '</strong>';
-                            html += '<span class="text-' + color + '-600 font-bold">Trust: ' + cast.trustRank + '</span>';
-                            html += '</div>';
-                            html += '<p class="text-gray-800">' + cast.text + '</p>';
-                            html += '<div class="text-sm text-gray-600 mt-2">';
-                            html += '❤️ ' + cast.reactions.likes + ' | 🔄 ' + cast.reactions.recasts;
-                            html += '</div>';
-                            html += '</div>';
-                        }
-                        container.innerHTML = html;
-                    } else {
-                        container.innerHTML = '<div class="bg-red-100 p-4 rounded">Error loading casts</div>';
-                    }
-                })
-                .catch(function(err) {
-                    loading.classList.add('hidden');
-                    container.innerHTML = '<div class="bg-red-100 p-4 rounded">Error: ' + err.message + '</div>';
-                });
+            if (data.success && data.casts && data.casts.length > 0) {
+                allCasts = data.casts;
+                renderCasts();
+                updateStats();
+                
+                if (data.source === 'demo') {
+                    showNote('📊 Demo data for "/' + channel + '" channel. Real data available for: crypto, nft', 'info');
+                } else if (data.source === 'pinata-hub') {
+                    showNote('✅ Real-time Farcaster data from "/' + channel + '" channel', 'success');
+                }
+            } else {
+                var errorMsg = data.message || 'No casts found for this channel';
+                container.innerHTML = '<div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded"><p class="text-sm text-yellow-700">' + errorMsg + '</p></div>';
+            }
+        })
+        .catch(function(error) {
+            loading.classList.add('hidden');
+            container.innerHTML = '<div class="bg-red-50 border-l-4 border-red-400 p-4 rounded"><p class="text-sm text-red-700"><strong>Error:</strong> ' + error.message + '</p></div>';
+            console.error('Fetch error:', error);
         });
+}
+
+function renderCasts() {
+    var container = document.getElementById('castsContainer');
+    var filtered = filterCasts(allCasts);
+    
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">No casts match the current filter</div>';
+        return;
+    }
+    
+    container.innerHTML = filtered.map(function(cast) {
+        var trustLevel = getTrustLevel(cast.trustRank);
+        var isQuarantined = cast.trustRank < 40;
         
-        // Auto-load on start
-        document.getElementById('loadBtn').click();
+        return '<div class="cast-card bg-white rounded-lg shadow p-6 ' + (isQuarantined ? 'quarantine' : '') + '">' +
+            '<div class="flex items-start justify-between mb-4">' +
+                '<div class="flex items-center space-x-3">' +
+                    '<div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-xl font-bold text-purple-600">' +
+                        escapeHtml(cast.author.displayName.charAt(0).toUpperCase()) +
+                    '</div>' +
+                    '<div>' +
+                        '<div class="font-semibold text-gray-900">' + escapeHtml(cast.author.displayName) + '</div>' +
+                        '<div class="text-sm text-gray-500">@' + escapeHtml(cast.author.username) + ' • FID: ' + cast.author.fid + '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="flex items-center space-x-2">' +
+                    '<span class="badge badge-' + trustLevel + '">' + trustLevel.toUpperCase() + '</span>' +
+                    (isQuarantined ? '<span class="text-xs text-red-600 font-semibold">⚠️ QUARANTINED</span>' : '') +
+                '</div>' +
+            '</div>' +
+            '<p class="text-gray-800 mb-4 whitespace-pre-wrap">' + escapeHtml(cast.text) + '</p>' +
+            '<div class="flex items-center justify-between text-sm text-gray-600 pt-3 border-t border-gray-100">' +
+                '<div class="flex space-x-4">' +
+                    '<span title="Likes">❤️ ' + cast.reactions.likes + '</span>' +
+                    '<span title="Recasts">🔄 ' + cast.reactions.recasts + '</span>' +
+                    (cast.reactions.replies ? '<span title="Replies">💬 ' + cast.reactions.replies + '</span>' : '') +
+                '</div>' +
+                '<div class="flex space-x-4">' +
+                    '<span class="font-semibold text-purple-600" title="Ethos Score">Score: ' + cast.ethosScore + '</span>' +
+                    '<span class="font-semibold text-indigo-600" title="Trust Rank">Trust: ' + cast.trustRank + '</span>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+}
+
+function filterCasts(casts) {
+    if (currentFilter === 'all') {
+        return casts;
+    }
+    
+    return casts.filter(function(cast) {
+        if (currentFilter === 'high') {
+            return cast.trustRank >= 70;
+        } else if (currentFilter === 'mid') {
+            return cast.trustRank >= 40 && cast.trustRank < 70;
+        } else if (currentFilter === 'low') {
+            return cast.trustRank < 40;
+        }
+        return true;
+    });
+}
+
+function getTrustLevel(rank) {
+    if (rank >= 70) return 'high';
+    if (rank >= 40) return 'mid';
+    return 'low';
+}
+
+function updateStats() {
+    var high = allCasts.filter(function(c) { return c.trustRank >= 70; }).length;
+    var mid = allCasts.filter(function(c) { return c.trustRank >= 40 && c.trustRank < 70; }).length;
+    var low = allCasts.filter(function(c) { return c.trustRank < 40; }).length;
+    
+    document.getElementById('stats').innerHTML = 
+        '<div class="bg-white rounded-lg shadow p-4">' +
+            '<div class="text-2xl font-bold text-purple-600">' + allCasts.length + '</div>' +
+            '<div class="text-sm text-gray-600">Total Casts</div>' +
+        '</div>' +
+        '<div class="bg-white rounded-lg shadow p-4">' +
+            '<div class="text-2xl font-bold text-green-600">' + high + '</div>' +
+            '<div class="text-sm text-gray-600">High Trust</div>' +
+        '</div>' +
+        '<div class="bg-white rounded-lg shadow p-4">' +
+            '<div class="text-2xl font-bold text-yellow-600">' + mid + '</div>' +
+            '<div class="text-sm text-gray-600">Mid Trust</div>' +
+        '</div>' +
+        '<div class="bg-white rounded-lg shadow p-4">' +
+            '<div class="text-2xl font-bold text-red-600">' + low + '</div>' +
+            '<div class="text-sm text-gray-600">Low Trust (Quarantined)</div>' +
+        '</div>';
+}
+
+function showNote(message, type) {
+    var colors = {
+        info: 'bg-blue-50 border-blue-400 text-blue-700',
+        warning: 'bg-yellow-50 border-yellow-400 text-yellow-700',
+        success: 'bg-green-50 border-green-400 text-green-700'
+    };
+    
+    var note = document.createElement('div');
+    note.className = 'mb-4 border-l-4 p-3 rounded text-sm ' + (colors[type] || colors.info);
+    note.textContent = message;
+    
+    var container = document.getElementById('castsContainer');
+    container.insertBefore(note, container.firstChild);
+}
+
+function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Auto-load on page load
+window.addEventListener('load', function() {
+    console.log('🔐 Ethos Farcaster Reader - Vibeathon 2025');
+    loadCasts();
+});
     </script>
 </body>
 </html>
