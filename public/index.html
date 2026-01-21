@@ -56,10 +56,13 @@
                         <input 
                             type="text" 
                             id="channelInput" 
-                            value="ethos" 
+                            value="base" 
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            placeholder="Enter channel name"
+                            placeholder="Enter channel name (e.g., base, ethereum, degen)"
                         >
+                        <div class="mt-2 text-xs text-gray-500">
+                            Popular: base, farcaster, degen, ethereum, memes, dev, crypto
+                        </div>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Trust Level Filter</label>
@@ -106,13 +109,21 @@ document.getElementById('filterSelect').addEventListener('change', function(e) {
     renderCasts();
 });
 
+// Allow Enter key to load casts
+document.getElementById('channelInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        loadCasts();
+    }
+});
+
 function loadCasts() {
-    var channel = document.getElementById('channelInput').value || 'ethos';
+    var channel = document.getElementById('channelInput').value || 'base';
     var loading = document.getElementById('loading');
     var container = document.getElementById('castsContainer');
     
     loading.classList.remove('hidden');
     container.innerHTML = '';
+    document.getElementById('stats').innerHTML = '';
     
     fetch('/api/channel?channel=' + encodeURIComponent(channel))
         .then(function(response) {
@@ -123,17 +134,62 @@ function loadCasts() {
         })
         .then(function(data) {
             loading.classList.add('hidden');
-            if (data.success) {
+            
+            if (data.success && data.casts && data.casts.length > 0) {
                 allCasts = data.casts;
                 renderCasts();
                 updateStats();
+                
+                // Afficher une note si données de demo
+                if (data.source === 'demo') {
+                    showNote('Using demo data. Configure PINATA_JWT for real Farcaster data.', 'info');
+                } else if (data.note) {
+                    showNote(data.note, 'info');
+                }
             } else {
-                container.innerHTML = '<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">Error loading casts</div>';
+                // Aucun cast trouvé ou erreur
+                var errorMsg = data.message || 'No casts found for this channel';
+                var suggestions = '';
+                
+                if (data.suggestedChannels && data.suggestedChannels.length > 0) {
+                    suggestions = '<div class="mt-4"><strong class="text-gray-700">Try these popular channels:</strong><br>' +
+                        '<div class="flex flex-wrap gap-2 mt-2">' +
+                        data.suggestedChannels.map(function(ch) {
+                            return '<button onclick="loadChannelQuick(\'' + ch + '\')" class="px-3 py-1 bg-purple-100 hover:bg-purple-200 rounded-full text-sm font-medium text-purple-700 transition">' + ch + '</button>';
+                        }).join('') +
+                        '</div></div>';
+                }
+                
+                container.innerHTML = '<div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">' +
+                    '<div class="flex">' +
+                        '<div class="flex-shrink-0">' +
+                            '<svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">' +
+                                '<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />' +
+                            '</svg>' +
+                        '</div>' +
+                        '<div class="ml-3">' +
+                            '<p class="text-sm text-yellow-700">' + errorMsg + '</p>' +
+                            suggestions +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
             }
         })
         .catch(function(error) {
             loading.classList.add('hidden');
-            container.innerHTML = '<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">Error: ' + error.message + '</div>';
+            container.innerHTML = '<div class="bg-red-50 border-l-4 border-red-400 p-4 rounded">' +
+                '<div class="flex">' +
+                    '<div class="flex-shrink-0">' +
+                        '<svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">' +
+                            '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />' +
+                        '</svg>' +
+                    '</div>' +
+                    '<div class="ml-3">' +
+                        '<p class="text-sm text-red-700"><strong>Error:</strong> ' + error.message + '</p>' +
+                        '<p class="text-sm text-red-600 mt-1">Please check console for details.</p>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
             console.error('Fetch error:', error);
         });
 }
@@ -154,12 +210,12 @@ function renderCasts() {
         return '<div class="cast-card bg-white rounded-lg shadow p-6 ' + (isQuarantined ? 'quarantine' : '') + '">' +
             '<div class="flex items-start justify-between mb-4">' +
                 '<div class="flex items-center space-x-3">' +
-                    '<div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-xl">' +
-                        cast.author.displayName.charAt(0) +
+                    '<div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-xl font-bold text-purple-600">' +
+                        cast.author.displayName.charAt(0).toUpperCase() +
                     '</div>' +
                     '<div>' +
                         '<div class="font-semibold text-gray-900">' + escapeHtml(cast.author.displayName) + '</div>' +
-                        '<div class="text-sm text-gray-500">@' + escapeHtml(cast.author.username) + '</div>' +
+                        '<div class="text-sm text-gray-500">@' + escapeHtml(cast.author.username) + ' • FID: ' + cast.author.fid + '</div>' +
                     '</div>' +
                 '</div>' +
                 '<div class="flex items-center space-x-2">' +
@@ -167,15 +223,16 @@ function renderCasts() {
                     (isQuarantined ? '<span class="text-xs text-red-600 font-semibold">⚠️ QUARANTINED</span>' : '') +
                 '</div>' +
             '</div>' +
-            '<p class="text-gray-800 mb-4">' + escapeHtml(cast.text) + '</p>' +
-            '<div class="flex items-center justify-between text-sm text-gray-600">' +
+            '<p class="text-gray-800 mb-4 whitespace-pre-wrap">' + escapeHtml(cast.text) + '</p>' +
+            '<div class="flex items-center justify-between text-sm text-gray-600 pt-3 border-t border-gray-100">' +
                 '<div class="flex space-x-4">' +
-                    '<span>❤️ ' + cast.reactions.likes + '</span>' +
-                    '<span>🔄 ' + cast.reactions.recasts + '</span>' +
+                    '<span title="Likes">❤️ ' + cast.reactions.likes + '</span>' +
+                    '<span title="Recasts">🔄 ' + cast.reactions.recasts + '</span>' +
+                    (cast.reactions.replies ? '<span title="Replies">💬 ' + cast.reactions.replies + '</span>' : '') +
                 '</div>' +
                 '<div class="flex space-x-4">' +
-                    '<span class="font-semibold">Ethos: ' + cast.ethosScore + '</span>' +
-                    '<span class="font-semibold text-purple-600">Trust: ' + cast.trustRank + '</span>' +
+                    '<span class="font-semibold text-purple-600" title="Ethos Score">Score: ' + cast.ethosScore + '</span>' +
+                    '<span class="font-semibold text-indigo-600" title="Trust Rank">Trust: ' + cast.trustRank + '</span>' +
                 '</div>' +
             '</div>' +
         '</div>';
@@ -229,6 +286,26 @@ function updateStats() {
         '</div>';
 }
 
+function showNote(message, type) {
+    var colors = {
+        info: 'bg-blue-50 border-blue-400 text-blue-700',
+        warning: 'bg-yellow-50 border-yellow-400 text-yellow-700',
+        success: 'bg-green-50 border-green-400 text-green-700'
+    };
+    
+    var note = document.createElement('div');
+    note.className = 'mb-4 border-l-4 p-3 rounded text-sm ' + (colors[type] || colors.info);
+    note.textContent = message;
+    
+    var container = document.getElementById('castsContainer');
+    container.insertBefore(note, container.firstChild);
+}
+
+function loadChannelQuick(channelName) {
+    document.getElementById('channelInput').value = channelName;
+    loadCasts();
+}
+
 function escapeHtml(text) {
     var div = document.createElement('div');
     div.textContent = text;
@@ -237,7 +314,7 @@ function escapeHtml(text) {
 
 // Auto-load on page load
 window.addEventListener('load', function() {
-    console.log('App loaded, fetching casts...');
+    console.log('Ethos Farcaster Reader loaded');
     loadCasts();
 });
     </script>
