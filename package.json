@@ -1,12 +1,5 @@
 {
   "name": "ethos-reader",
   "version": "1.0.0",
-  "type": "module",
-  "description": "Farcaster channel reader with Ethos Score",
-  "scripts": {
-    "dev": "vercel dev"
-  },
-  "dependencies": {
-    "@neynar/nodejs-sdk": "^1.25.0"
-  }
+  "description": "Farcaster channel reader with Ethos Score"
 }
