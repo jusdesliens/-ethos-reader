@@ -1,10 +1,79 @@
-module.exports = function(req, res) {
+module.exports = async function(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', 'application/json');
     
     var url = new URL(req.url, 'http://localhost');
     var channel = url.searchParams.get('channel') || 'ethos';
     
+    // Si PINATA_JWT est configuré, utiliser les vraies données
+    if (process.env.PINATA_JWT) {
+        try {
+            var pinataUrl = 'https://hub.pinata.cloud/v1/castsByParent?url=' + encodeURIComponent('https://warpcast.com/~/channel/' + channel);
+            
+            var response = await fetch(pinataUrl, {
+                headers: {
+                    'Authorization': 'Bearer ' + process.env.PINATA_JWT
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Pinata API error: ' + response.status);
+            }
+            
+            var data = await response.json();
+            var casts = [];
+            
+            // Parser les vrais casts de Pinata
+            if (data.messages && data.messages.length > 0) {
+                for (var i = 0; i < data.messages.length; i++) {
+                    var msg = data.messages[i];
+                    var castData = msg.data;
+                    
+                    // Simuler un Ethos Score (entre 30 et 95)
+                    var ethosScore = Math.floor(Math.random() * 65) + 30;
+                    
+                    var likes = castData.castAddBody?.reactionsCount || 0;
+                    var recasts = castData.castAddBody?.recastsCount || 0;
+                    var rank = 0.75 * ethosScore + 0.25 * (Math.log(1 + likes + recasts) * 20);
+                    
+                    casts.push({
+                        hash: msg.hash,
+                        text: castData.castAddBody?.text || '',
+                        author: {
+                            username: msg.signer || 'unknown',
+                            displayName: msg.signer || 'Unknown User',
+                            walletAddress: msg.signer,
+                            fid: msg.data.fid
+                        },
+                        reactions: {
+                            likes: likes,
+                            recasts: recasts
+                        },
+                        timestamp: new Date(msg.data.timestamp * 1000).toISOString(),
+                        ethosScore: ethosScore,
+                        trustRank: Math.round(rank * 100) / 100
+                    });
+                }
+                
+                casts.sort(function(a, b) {
+                    return b.trustRank - a.trustRank;
+                });
+                
+                return res.json({
+                    success: true,
+                    channel: channel,
+                    casts: casts,
+                    totalCasts: casts.length,
+                    source: 'pinata'
+                });
+            }
+        } catch (error) {
+            console.error('Pinata error:', error);
+            // Fallback vers les données de démo
+        }
+    }
+    
+    // DONNÉES DE DÉMO (si pas de PINATA_JWT ou en cas d'erreur)
     var profiles = [
         {fid: 5650, user: 'vitalik', name: 'Vitalik Buterin', score: 95, text: 'Just shipped a major protocol update. 🚀'},
         {fid: 3, user: 'dwr', name: 'Dan Romero', score: 92, text: 'Building in public! 💜'},
@@ -57,6 +126,7 @@ module.exports = function(req, res) {
         success: true,
         channel: channel,
         casts: casts,
-        totalCasts: casts.length
+        totalCasts: casts.length,
+        source: 'demo'
     });
 };
