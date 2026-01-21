@@ -156,69 +156,23 @@ module.exports = async function(req, res) {
         }
     }
     
-    // FALLBACK : Données de démo par channel
-    var channelDemoData = {
-        'ethos': [
-            {fid: 5650, user: 'vitalik', name: 'Vitalik Buterin', score: 95, text: 'Ethos reputation system is crucial for Web3 trust. 🔐'},
-            {fid: 3, user: 'dwr', name: 'Dan Romero', score: 92, text: 'Building reputation layers into Farcaster protocol.'},
-            {fid: 239, user: 'shreyas', name: 'Shreyas Hariharan', score: 88, text: 'On-chain reputation will define the next era of social.'},
-            {fid: 1234, user: 'jessepollak', name: 'Jesse Pollak', score: 90, text: 'Ethos + Base = transparent trust at scale.'},
-            {fid: 1122, user: 'linda', name: 'Linda Xie', score: 83, text: 'Reputation systems need to be composable and portable.'},
-            {fid: 9876, user: 'spammer1', name: 'Quick Money', score: 25, text: 'ETHOS AIRDROP! Free tokens for everyone!!! 🚨'},
-            {fid: 5566, user: 'alice', name: 'Alice Chen', score: 75, text: 'Working on zkProofs for private reputation scores.'},
-            {fid: 7788, user: 'bob', name: 'Bob Smith', score: 65, text: 'How does Ethos compare to Gitcoin Passport?'},
-            {fid: 3344, user: 'carol', name: 'Carol Davis', score: 55, text: 'Exploring reputation attestations on Base L2.'},
-            {fid: 9988, user: 'david', name: 'David Lee', score: 45, text: 'Just discovered Ethos, learning about attestations!'}
-        ],
-        'base': [
-            {fid: 1234, user: 'jessepollak', name: 'Jesse Pollak', score: 95, text: 'Base is scaling Ethereum to billions of users. 🔵'},
-            {fid: 3, user: 'dwr', name: 'Dan Romero', score: 92, text: 'Farcaster + Base = perfect match for onchain social.'},
-            {fid: 5650, user: 'vitalik', name: 'Vitalik Buterin', score: 93, text: 'L2s like Base are critical for Ethereum\'s future.'},
-            {fid: 7891, user: 'punk6529', name: '6529', score: 88, text: 'Moving our entire NFT ecosystem to Base.'},
-            {fid: 4455, user: 'coopahtroopa', name: 'Cooper Turley', score: 82, text: 'Base fees are making music NFTs accessible again!'},
-            {fid: 5566, user: 'alice', name: 'Alice Chen', score: 78, text: 'Deployed our first contract on Base mainnet today.'},
-            {fid: 7788, user: 'bob', name: 'Bob Smith', score: 68, text: 'Base gas fees are incredibly low compared to mainnet!'},
-            {fid: 9877, user: 'basescam', name: 'BaseScam', score: 15, text: 'URGENT: Send ETH to this Base address for 10x returns!!!'}
-        ],
-        'ethereum': [
-            {fid: 5650, user: 'vitalik', name: 'Vitalik Buterin', score: 98, text: 'Working on the next Ethereum upgrade roadmap.'},
-            {fid: 6546, user: 'balajis', name: 'Balaji Srinivasan', score: 90, text: 'Ethereum is the world computer. Full stop.'},
-            {fid: 239, user: 'shreyas', name: 'Shreyas Hariharan', score: 87, text: 'EIP-4844 is a game changer for rollup scalability.'},
-            {fid: 1122, user: 'linda', name: 'Linda Xie', score: 85, text: 'Ethereum\'s ecosystem depth is unmatched.'},
-            {fid: 3, user: 'dwr', name: 'Dan Romero', score: 83, text: 'Building on Ethereum\'s security guarantees since day one.'},
-            {fid: 7891, user: 'punk6529', name: '6529', score: 88, text: 'All digital art should be stored on Ethereum forever.'},
-            {fid: 5566, user: 'alice', name: 'Alice Chen', score: 76, text: 'Studying EVM internals, so much complexity to learn!'}
-        ],
-        'farcaster': [
-            {fid: 3, user: 'dwr', name: 'Dan Romero', score: 98, text: 'Farcaster is growing faster than we imagined! 💜'},
-            {fid: 5650, user: 'vitalik', name: 'Vitalik Buterin', score: 95, text: 'Love the sufficiently decentralized approach of Farcaster.'},
-            {fid: 239, user: 'shreyas', name: 'Shreyas Hariharan', score: 90, text: 'Building the future of social protocols on Farcaster.'},
-            {fid: 1234, user: 'jessepollak', name: 'Jesse Pollak', score: 88, text: 'Farcaster on Base is the perfect combo.'},
-            {fid: 7891, user: 'punk6529', name: '6529', score: 85, text: 'Finally a social network I can trust with my identity.'},
-            {fid: 4455, user: 'coopahtroopa', name: 'Cooper Turley', score: 82, text: 'The creator economy is moving to Farcaster.'}
-        ],
-        'degen': [
-            {fid: 2010, user: 'degentokenomics', name: 'Degen Enthusiast', score: 88, text: '$DEGEN to the moon! 🚀'},
-            {fid: 2011, user: 'degenfarmer', name: 'Degen Farmer', score: 85, text: 'Just got my DEGEN airdrop! Best community ever!'},
-            {fid: 2012, user: 'cryptodegen', name: 'Crypto Degen', score: 80, text: 'DEGEN is revolutionizing tipping culture on Farcaster.'},
-            {fid: 2013, user: 'degenbuilder', name: 'Degen Builder', score: 75, text: 'Building on the DEGEN ecosystem, DM for collabs.'},
-            {fid: 9879, user: 'fakearidrop', name: 'Fake Airdrop', score: 20, text: 'FREE DEGEN TOKENS! Send 1 ETH to claim 1000 DEGEN!!!'}
-        ],
-        'zama': [
-            {fid: 2001, user: 'zamadev', name: 'Zama Core Team', score: 92, text: 'FHE is revolutionizing private smart contracts! 🔐'},
-            {fid: 2002, user: 'cryptoenthusiast', name: 'Crypto Enthusiast', score: 88, text: 'Zama\'s TFHE library is incredible for on-chain privacy.'},
-            {fid: 5650, user: 'vitalik', name: 'Vitalik Buterin', score: 95, text: 'Fully homomorphic encryption is the future of privacy.'},
-            {fid: 2003, user: 'privacydev', name: 'Privacy Developer', score: 85, text: 'Building a private voting system with Zama TFHE.'},
-            {fid: 2004, user: 'fheresearcher', name: 'FHE Researcher', score: 90, text: 'Published new paper on FHE performance optimizations.'}
-        ]
-    };
+    // FALLBACK : Données de démo
+    var demoProfiles = [
+        {fid: 5650, user: 'vitalik', name: 'Vitalik Buterin', score: 95, text: 'Just shipped a major protocol update. 🚀'},
+        {fid: 3, user: 'dwr', name: 'Dan Romero', score: 92, text: 'Building in public! 💜'},
+        {fid: 239, user: 'shreyas', name: 'Shreyas Hariharan', score: 88, text: 'New governance proposal is live!'},
+        {fid: 1234, user: 'jessepollak', name: 'Jesse Pollak', score: 90, text: 'Base is scaling Ethereum to billions.'},
+        {fid: 6546, user: 'balajis', name: 'Balaji Srinivasan', score: 87, text: 'Network states are the future.'},
+        {fid: 7891, user: 'punk6529', name: '6529', score: 85, text: 'Open metaverse updates coming soon.'},
+        {fid: 1122, user: 'linda', name: 'Linda Xie', score: 83, text: 'Excited about the latest DeFi innovations!'},
+        {fid: 4455, user: 'coopahtroopa', name: 'Cooper Turley', score: 80, text: 'Music NFTs are revolutionizing the industry.'},
+        {fid: 9876, user: 'spammer1', name: 'Quick Money', score: 25, text: 'FREE CRYPTO AIRDROP! Click here now!!!'},
+        {fid: 9877, user: 'scammer2', name: 'Get Rich Quick', score: 15, text: 'Send 1 ETH get 10 back guaranteed!!!'}
+    ];
     
-    // Utiliser les données de démo
-    var profiles = channelDemoData[channel.toLowerCase()] || channelDemoData['ethos'];
     var demoCasts = [];
-    
-    for (var i = 0; i < profiles.length; i++) {
-        var p = profiles[i];
+    for (var i = 0; i < demoProfiles.length; i++) {
+        var p = demoProfiles[i];
         var likes = Math.floor(Math.random() * 200);
         var recasts = Math.floor(Math.random() * 80);
         var replies = Math.floor(Math.random() * 20);
