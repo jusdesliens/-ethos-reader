@@ -23,8 +23,6 @@ module.exports = async (req, res) => {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('[API] Pinata error:', response.status, errorText);
             throw new Error(`Pinata API error: ${response.status}`);
         }
 
@@ -38,55 +36,24 @@ module.exports = async (req, res) => {
             });
         }
 
-        const casts = data.messages.map(msg => {
-            const cast = msg.data.castAddBody;
-            const fid = msg.data.fid;
-            
-            const walletAddress = `0x${fid.toString(16).padStart(40, '0')}`;
-            const ethosScore = getEthosScore(walletAddress);
-            
-            const likes = Math.floor(Math.random() * 50);
-            const recasts = Math.floor(Math.random() * 20);
-            const trustRank = calculateTrustRank(ethosScore, likes, recasts);
+        // Récupérer les infos des utilisateurs
+        const fids = [...new Set(data.messages.map(m => m.data.fid))];
+        const userInfos = await getUserInfos(fids, jwt);
 
-            return {
-                hash: `0x${msg.hash}`,
-                text: cast.text || '',
-                author: {
-                    username: `user${fid}`,
-                    displayName: `User ${fid}`,
-                    walletAddress: walletAddress.slice(0, 6) + '...' + walletAddress.slice(-4),
-                },
-                reactions: { likes, recasts },
-                ethosScore,
-                trustRank,
-            };
-        });
+        const casts = data.messages
+            .filter(msg => msg.data?.castAddBody?.text) // Filtrer les casts vides
+            .map(msg => {
+                const cast = msg.data.castAddBody;
+                const fid = msg.data.fid;
+                const userInfo = userInfos[fid] || {};
+                
+                const walletAddress = userInfo.verifications?.[0] || 
+                                    userInfo.custodyAddress || 
+                                    `0x${fid.toString(16).padStart(40, '0')}`;
+                const ethosScore = getEthosScore(walletAddress);
+                
+                const likes = Math.floor(Math.random() * 100);
+                const recasts = Math.floor(Math.random() * 30);
+                const trustRank = calculateTrustRank(ethosScore, likes, recasts);
 
-        casts.sort((a, b) => b.trustRank - a.trustRank);
-
-        res.status(200).json({
-            success: true,
-            channel,
-            casts,
-            source: 'pinata'
-        });
-
-    } catch (error) {
-        console.error('[API] Error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
-    }
-};
-
-function getEthosScore(address) {
-    const hash = address.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return 20 + (hash % 76);
-}
-
-function calculateTrustRank(ethosScore, likes, recasts) {
-    const social = Math.log(1 + likes + recasts);
-    return 0.75 * ethosScore + 0.25 * (social * 20);
-}
+                return {
