@@ -267,11 +267,11 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## 🏆 Ethos Vibeathon 2025
 
 **Project Category**: Ethos + Farcaster Integration  
-**Built by**: [Your Name]  
+**Built by**:Julien  
 **Contact**: 
-- 📧 Email: your.email@example.com
-- 🐦 Twitter: [@yourusername](https://twitter.com/yourusername)
-- 💬 Farcaster: @yourusername
+- 📧 Email: jusdesliens@proton.me
+- 🐦 Twitter: [@kiaitwo](https://twitter.com/kiaitwo)
+- 💬 Farcaster: @subwoffer
 
 ---
 
