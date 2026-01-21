@@ -69,3 +69,24 @@ module.exports = async (req, res) => {
             success: true,
             channel,
             casts,
+            source: 'pinata'
+        });
+
+    } catch (error) {
+        console.error('[API] Error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+};
+
+function getEthosScore(address) {
+    const hash = address.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return 20 + (hash % 76);
+}
+
+function calculateTrustRank(ethosScore, likes, recasts) {
+    const social = Math.log(1 + likes + recasts);
+    return 0.75 * ethosScore + 0.25 * (social * 20);
+}
