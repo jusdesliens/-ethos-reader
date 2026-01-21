@@ -1,4 +1,4 @@
-emodule.exports = async (req, res) => {
+module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', 'application/json');
     
@@ -12,7 +12,6 @@ emodule.exports = async (req, res) => {
         
         console.log(`[API] Fetching channel: ${channel}`);
         
-        // Pinata Farcaster API endpoint
         const url = `https://hub.pinata.cloud/v1/castsByParent?url=https://warpcast.com/~/channel/${channel}&limit=${limit}`;
         
         const response = await fetch(url, {
@@ -39,16 +38,13 @@ emodule.exports = async (req, res) => {
             });
         }
 
-        // Transformer les données Pinata
         const casts = data.messages.map(msg => {
             const cast = msg.data.castAddBody;
             const fid = msg.data.fid;
             
-            // Générer une adresse wallet depuis le FID
             const walletAddress = `0x${fid.toString(16).padStart(40, '0')}`;
             const ethosScore = getEthosScore(walletAddress);
             
-            // Compter les réactions (approximatif)
             const likes = Math.floor(Math.random() * 50);
             const recasts = Math.floor(Math.random() * 20);
             const trustRank = calculateTrustRank(ethosScore, likes, recasts);
@@ -73,24 +69,3 @@ emodule.exports = async (req, res) => {
             success: true,
             channel,
             casts,
-            source: 'pinata'
-        });
-
-    } catch (error) {
-        console.error('[API] Error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
-    }
-};
-
-function getEthosScore(address) {
-    const hash = address.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return 20 + (hash % 76);
-}
-
-function calculateTrustRank(ethosScore, likes, recasts) {
-    const social = Math.log(1 + likes + recasts);
-    return 0.75 * ethosScore + 0.25 * (social * 20);
-}
